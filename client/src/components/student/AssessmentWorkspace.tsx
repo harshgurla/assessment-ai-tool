@@ -330,48 +330,50 @@ export const AssessmentWorkspace = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center flex-1 min-w-0">
               <button
                 onClick={() => navigate('/student')}
-                className="mr-4 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                className="mr-2 sm:mr-4 p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">{assessment.title}</h1>
-                <p className="text-sm text-gray-500">{assessment.topic}</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">{assessment.title}</h1>
+                <p className="text-xs sm:text-sm text-gray-500 truncate hidden sm:block">{assessment.topic}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+            <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+              <div className={`flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
                 timeRemaining < 300000 ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
               }`}>
-                <Clock className="h-4 w-4 mr-1" />
-                {formatTime(timeRemaining)}
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <span className="hidden sm:inline">{formatTime(timeRemaining)}</span>
+                <span className="sm:hidden">{Math.floor(timeRemaining / 60000)}m</span>
               </div>
               <button
                 onClick={() => handleSubmitAssessment()}
                 disabled={isSubmitting}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
+                className="bg-green-600 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center text-xs sm:text-sm"
               >
                 {isSubmitting ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
                 ) : (
-                  <Send className="h-4 w-4 mr-2" />
+                  <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 )}
-                Submit Assessment
+                <span className="hidden sm:inline">Submit Assessment</span>
+                <span className="sm:hidden">Submit</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Question Navigation Sidebar */}
-          <div className="lg:col-span-1">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+          {/* Question Navigation Sidebar - Desktop */}
+          <div className="hidden lg:block lg:col-span-1">
             <div className="bg-white rounded-xl p-6 shadow-sm border sticky top-24">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Questions</h3>
               
@@ -432,6 +434,53 @@ export const AssessmentWorkspace = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-3">
+            {/* Mobile Progress - Shown only on mobile */}
+            <div className="lg:hidden mb-4 bg-white rounded-xl p-4 shadow-sm border">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-700">Question {currentQuestionIndex + 1} of {assessment.questions.length}</span>
+                <span className="text-xs text-gray-500">{Math.round(progress)}% Complete</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+                  disabled={currentQuestionIndex === 0}
+                  className="flex items-center px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Prev
+                </button>
+                <div className="flex items-center space-x-1">
+                  {assessment.questions.slice(0, 10).map((q, idx) => (
+                    <button
+                      key={q._id}
+                      onClick={() => setCurrentQuestionIndex(idx)}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        idx === currentQuestionIndex 
+                          ? 'bg-blue-600 w-6'
+                          : answers[q._id] 
+                            ? 'bg-green-500' 
+                            : 'bg-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentQuestionIndex(Math.min(assessment.questions.length - 1, currentQuestionIndex + 1))}
+                  disabled={currentQuestionIndex === assessment.questions.length - 1}
+                  className="flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  Next
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </button>
+              </div>
+            </div>
+
             <div className="bg-white rounded-xl shadow-sm border">
               {/* Question Header */}
               <div className="p-6 border-b">

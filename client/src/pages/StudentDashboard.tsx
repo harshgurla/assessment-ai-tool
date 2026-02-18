@@ -11,7 +11,9 @@ import {
   LogOut,
   Timer,
   Award,
-  TrendingUp
+  TrendingUp,
+  Menu,
+  X
 } from 'lucide-react';
 import {
   AssessmentList,
@@ -49,6 +51,7 @@ export const StudentDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [stats, setStats] = useState<StudentStats>({
     totalAssessments: 0,
@@ -157,11 +160,31 @@ export const StudentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
+      <div className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out ${
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
         <div className="p-6">
-          <h1 className="text-2xl font-bold text-gray-900">Learning Hub</h1>
-          <p className="text-sm text-gray-500 mt-1">Student Portal</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Learning Hub</h1>
+              <p className="text-sm text-gray-500 mt-1">Student Portal</p>
+            </div>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+            >
+              <X className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
         </div>
 
         <nav className="mt-6 flex-1">
@@ -170,7 +193,10 @@ export const StudentDashboard = () => {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id as ActiveTab)}
+                onClick={() => {
+                  setActiveTab(item.id as ActiveTab);
+                  setIsMobileMenuOpen(false);
+                }}
                 className={`w-full flex items-center px-6 py-3 text-left transition-colors ${
                   activeTab === item.id
                     ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
@@ -207,11 +233,18 @@ export const StudentDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold text-gray-900 capitalize">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 mr-2"
+            >
+              <Menu className="h-6 w-6 text-gray-600" />
+            </button>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 capitalize truncate">
                 {activeTab}
               </h2>
               {error && (
@@ -227,12 +260,12 @@ export const StudentDashboard = () => {
                 </div>
               )}
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+            <div className="hidden sm:flex items-center space-x-2 sm:space-x-4">
+              <div className="bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
                 Rank #{stats.rank || 'N/A'}
               </div>
-              <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                {stats.averageScore.toFixed(1)}% Avg
+              <div className="bg-blue-100 text-blue-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
+                {stats.averageScore.toFixed(1)}%
               </div>
             </div>
           </div>
@@ -243,69 +276,69 @@ export const StudentDashboard = () => {
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               {/* Welcome Section */}
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-2xl font-bold">Welcome back, {user?.name || 'Student'}! 👋</h3>
-                    <p className="mt-2 text-blue-100">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="text-xl sm:text-2xl font-bold">Welcome back, {user?.name || 'Student'}! 👋</h3>
+                    <p className="mt-2 text-blue-100 text-sm sm:text-base">
                       Ready to continue your learning journey? Let's tackle some assessments!
                     </p>
                   </div>
-                  <div className="text-right">
-                    <div className="bg-white/20 rounded-lg p-4">
-                      <div className="text-3xl font-bold">{stats.currentStreak}</div>
-                      <div className="text-sm text-blue-100">Day Streak</div>
+                  <div className="w-full sm:w-auto">
+                    <div className="bg-white/20 rounded-lg p-3 sm:p-4 text-center">
+                      <div className="text-2xl sm:text-3xl font-bold">{stats.currentStreak}</div>
+                      <div className="text-xs sm:text-sm text-blue-100">Day Streak</div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white rounded-xl p-6 shadow-sm border">
-                  <div className="flex items-center">
-                    <div className="bg-blue-100 rounded-lg p-3">
-                      <BookOpen className="h-6 w-6 text-blue-600" />
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+                <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center">
+                    <div className="bg-blue-100 rounded-lg p-2 sm:p-3 mb-2 sm:mb-0">
+                      <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-500">Total Assessments</p>
-                      <p className="text-2xl font-bold text-gray-900">{stats.totalAssessments}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl p-6 shadow-sm border">
-                  <div className="flex items-center">
-                    <div className="bg-green-100 rounded-lg p-3">
-                      <CheckCircle className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-500">Completed</p>
-                      <p className="text-2xl font-bold text-gray-900">{stats.completedAssessments}</p>
+                    <div className="sm:ml-4">
+                      <p className="text-xs sm:text-sm font-medium text-gray-500">Total</p>
+                      <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.totalAssessments}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl p-6 shadow-sm border">
-                  <div className="flex items-center">
-                    <div className="bg-purple-100 rounded-lg p-3">
-                      <Award className="h-6 w-6 text-purple-600" />
+                <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center">
+                    <div className="bg-green-100 rounded-lg p-2 sm:p-3 mb-2 sm:mb-0">
+                      <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-500">Average Score</p>
-                      <p className="text-2xl font-bold text-gray-900">{stats.averageScore.toFixed(1)}%</p>
+                    <div className="sm:ml-4">
+                      <p className="text-xs sm:text-sm font-medium text-gray-500">Completed</p>
+                      <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.completedAssessments}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl p-6 shadow-sm border">
-                  <div className="flex items-center">
-                    <div className="bg-orange-100 rounded-lg p-3">
-                      <Timer className="h-6 w-6 text-orange-600" />
+                <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center">
+                    <div className="bg-purple-100 rounded-lg p-2 sm:p-3 mb-2 sm:mb-0">
+                      <Award className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-500">Time Spent</p>
-                      <p className="text-2xl font-bold text-gray-900">
+                    <div className="sm:ml-4">
+                      <p className="text-xs sm:text-sm font-medium text-gray-500">Avg Score</p>
+                      <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.averageScore.toFixed(1)}%</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center">
+                    <div className="bg-orange-100 rounded-lg p-2 sm:p-3 mb-2 sm:mb-0">
+                      <Timer className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
+                    </div>
+                    <div className="sm:ml-4">
+                      <p className="text-xs sm:text-sm font-medium text-gray-500">Time Spent</p>
+                      <p className="text-lg sm:text-2xl font-bold text-gray-900">
                         {stats.totalTimeSpent >= 60 
                           ? `${Math.floor(stats.totalTimeSpent / 60)}h ${Math.round(stats.totalTimeSpent % 60)}m`
                           : `${Math.round(stats.totalTimeSpent)}m`

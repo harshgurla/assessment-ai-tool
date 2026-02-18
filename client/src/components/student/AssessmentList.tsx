@@ -122,10 +122,10 @@ export const AssessmentList = ({ assessments, loading, onStartAssessment, onRetr
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border">
-        <div className="flex flex-col lg:flex-row gap-4">
+      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -133,32 +133,34 @@ export const AssessmentList = ({ assessments, loading, onStartAssessment, onRetr
               placeholder="Search assessments..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base\"
             />
           </div>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
+          <div className="grid grid-cols-2 gap-2 sm:gap-4">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as any)}
+              className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base\"
+            >
             <option value="all">All Status</option>
             <option value="not-started">Not Started</option>
             <option value="in-progress">In Progress</option>
             <option value="completed">Completed</option>
           </select>
-          <select
-            value={filterDifficulty}
-            onChange={(e) => setFilterDifficulty(e.target.value as any)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Difficulty</option>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
+            <select
+              value={filterDifficulty}
+              onChange={(e) => setFilterDifficulty(e.target.value as any)}
+              className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base\"
+            >
+              <option value="all">All Difficulty</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
           <button
             onClick={onRetry}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center"
+            className="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center text-sm sm:text-base\"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -184,17 +186,17 @@ export const AssessmentList = ({ assessments, loading, onStartAssessment, onRetr
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {filteredAssessments.map((assessment) => (
             <div key={assessment._id} className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-shadow">
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
+              <div className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center mb-2">
                       {getStatusIcon(assessment.status)}
-                      <h3 className="text-xl font-semibold text-gray-900 ml-2">{assessment.title}</h3>
+                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 ml-2 truncate">{assessment.title}</h3>
                     </div>
-                    <p className="text-gray-600 mb-3">{assessment.topic}</p>
+                    <p className="text-sm sm:text-base text-gray-600 mb-3 line-clamp-2">{assessment.topic}</p>
                     
                     <div className="flex flex-wrap items-center gap-2 mb-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(assessment.status)}`}>
@@ -208,43 +210,43 @@ export const AssessmentList = ({ assessments, loading, onStartAssessment, onRetr
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                       <div className="flex items-center">
-                        <Timer className="h-4 w-4 mr-1" />
-                        {formatDuration(assessment.duration)}
+                        <Timer className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">{formatDuration(assessment.duration)}</span>
                       </div>
                       <div className="flex items-center">
-                        <BookOpen className="h-4 w-4 mr-1" />
-                        {assessment.questionCount} questions
+                        <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">{assessment.questionCount} Q's</span>
                       </div>
                       <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        {new Date(assessment.createdAt).toLocaleDateString()}
+                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">{new Date(assessment.createdAt).toLocaleDateString()}</span>
                       </div>
                       {assessment.score !== undefined && (
                         <div className="flex items-center">
-                          <Award className="h-4 w-4 mr-1" />
-                          {assessment.score}% score
+                          <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{assessment.score}%</span>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="ml-6 flex flex-col items-end space-y-2">
+                  <div className="flex sm:flex-col items-center sm:items-end gap-2">
                     {assessment.status === 'not-started' && (
                       <button
                         onClick={() => onStartAssessment(assessment)}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                        className="flex-1 sm:flex-initial bg-blue-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-sm sm:text-base whitespace-nowrap\"
                       >
-                        <PlayCircle className="h-4 w-4 mr-2" />
-                        Start Assessment
+                        <PlayCircle className="h-4 w-4 mr-2\" />
+                        Start
                       </button>
                     )}
                     
                     {assessment.status === 'in-progress' && (
                       <button
                         onClick={() => onStartAssessment(assessment)}
-                        className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors flex items-center"
+                        className="flex-1 sm:flex-initial bg-yellow-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center text-sm sm:text-base whitespace-nowrap\"
                       >
                         <Clock className="h-4 w-4 mr-2" />
                         Continue

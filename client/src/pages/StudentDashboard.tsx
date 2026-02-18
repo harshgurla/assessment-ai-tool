@@ -93,7 +93,7 @@ export const StudentDashboard = () => {
 
   const fetchStudentStats = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/students/stats`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/stats`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

@@ -86,7 +86,7 @@ export const StudentProgress = ({ userId }: StudentProgressProps) => {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/students/stats`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

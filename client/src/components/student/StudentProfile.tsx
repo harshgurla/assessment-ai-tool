@@ -81,7 +81,7 @@ export const StudentProfile = () => {
       const data = await response.json();
       
       // Fetch stats
-      const statsResponse = await fetch(`${import.meta.env.VITE_API_URL}/users/students/stats`, {
+      const statsResponse = await fetch(`${import.meta.env.VITE_API_URL}/users/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

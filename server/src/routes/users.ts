@@ -99,7 +99,7 @@ router.get('/students/:id', authenticate, requireTeacher, async (req: Authentica
 });
 
 // Get stats for the authenticated student
-router.get('/students/stats', authenticate, requireStudent, async (req: AuthenticatedRequest, res) => {
+router.get('/stats', authenticate, requireStudent, async (req: AuthenticatedRequest, res) => {
   try {
     const studentEmail = req.user!.email;
 

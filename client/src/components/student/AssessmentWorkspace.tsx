@@ -127,23 +127,18 @@ export const AssessmentWorkspace = () => {
 
       let sessionData;
       if (startResponse.ok) {
-        // Assessment started successfully
+        // Assessment started successfully (new or already started)
         sessionData = await startResponse.json();
+        console.log('Session data:', sessionData);
         setSession({
           resultId: sessionData.resultId,
           startedAt: sessionData.startedAt,
           duration: sessionData.duration
         });
       } else {
-        // Check if it's because assessment is already started
+        // Handle error cases
         const errorData = await startResponse.json();
-        if (errorData.error?.includes('already started')) {
-          // Assessment already started, we need to get the existing session data
-          // For now, we'll fetch assessment details and handle it there
-          console.log('Assessment already started, continuing...');
-        } else {
-          throw new Error(errorData.error || 'Failed to start assessment');
-        }
+        throw new Error(errorData.error || 'Failed to start assessment');
       }
 
       // Fetch the assessment details
@@ -158,24 +153,25 @@ export const AssessmentWorkspace = () => {
       }
 
       const detailsData = await detailsResponse.json();
+      
+      // Validate assessment data
+      if (!detailsData.assessment || !detailsData.assessment.questions) {
+        throw new Error('Invalid assessment data received');
+      }
+      
       setAssessment({
         id: detailsData.assessment.id || detailsData.assessment._id,
-        title: detailsData.assessment.title,
-        topic: detailsData.assessment.topic,
-        language: detailsData.assessment.language,
-        difficulty: detailsData.assessment.difficulty,
-        duration: detailsData.assessment.duration,
+        title: detailsData.assessment.title || 'Untitled Assessment',
+        topic: detailsData.assessment.topic || 'General',
+        language: detailsData.assessment.language || 'javascript',
+        difficulty: detailsData.assessment.difficulty || 'beginner',
+        duration: detailsData.assessment.duration || 60,
         questions: detailsData.assessment.questions
       });
 
-      // If we don't have session data yet (assessment already started case),
-      // we'll set a default duration for timer (this can be improved)
+      // Ensure we have session data before proceeding
       if (!sessionData) {
-        setSession({
-          resultId: 'existing', // Placeholder
-          startedAt: new Date().toISOString(), // Placeholder - should get real data
-          duration: detailsData.assessment.duration
-        });
+        throw new Error('Failed to initialize assessment session');
       }
 
     } catch (err) {
@@ -506,7 +502,7 @@ export const AssessmentWorkspace = () => {
                       </div>
                       <Editor
                         height="300px"
-                        language={assessment.language.toLowerCase()}
+                        language={assessment.language?.toLowerCase() || 'javascript'}
                         value={answers[currentQuestion._id]?.code || ''}
                         onChange={(value) => handleAnswerChange(currentQuestion._id, '', value || '')}
                         onMount={(editor) => { editorRef.current = editor; }}

@@ -97,40 +97,69 @@ const isValidProgressStats = (data: unknown): data is ProgressStats => {
   if (!data || typeof data !== 'object') return false;
   
   const requiredNumbers = ['totalAssessments', 'completedAssessments', 'averageScore', 'totalTimeSpent', 'streak', 'rank', 'totalStudents'];
-  if (!requiredNumbers.every(key => typeof (data as Record<string, unknown>)[key] === 'number' && (data as Record<string, number>)[key] >= 0)) return false;
+  // Allow undefined or valid numbers
+  if (!requiredNumbers.every(key => {
+    const value = (data as Record<string, unknown>)[key];
+    return value === undefined || (typeof value === 'number' && value >= 0);
+  })) return false;
   
   const requiredArrays = ['recentScores', 'subjectPerformance', 'monthlyProgress', 'weeklyActivity', 'achievements', 'skillLevels'];
-  if (!requiredArrays.every(key => Array.isArray((data as Record<string, unknown>)[key]))) return false;
+  // Allow undefined or arrays
+  if (!requiredArrays.every(key => {
+    const value = (data as Record<string, unknown>)[key];
+    return value === undefined || Array.isArray(value);
+  })) return false;
   
-  // Validate improvements object
-  if (!(data as Record<string, unknown>).improvements || typeof (data as Record<string, unknown>).improvements !== 'object') return false;
-  const improvementKeys = ['score', 'time', 'accuracy'];
-  if (!improvementKeys.every(key => typeof (data as Record<string, any>).improvements[key] === 'number')) return false;
+  // Validate improvements object - allow undefined
+  const improvements = (data as Record<string, unknown>).improvements;
+  if (improvements !== undefined && improvements !== null) {
+    if (typeof improvements !== 'object') return false;
+    const improvementKeys = ['score', 'time', 'accuracy'];
+    if (!improvementKeys.every(key => {
+      const value = (improvements as Record<string, unknown>)[key];
+      return value === undefined || typeof value === 'number';
+    })) return false;
+  }
   
   return true;
 };
 
 // Data sanitizer to ensure safe values
 const sanitizeProgressData = (data: unknown): ProgressStats | null => {
-  if (!isValidProgressStats(data)) return null;
-  
-  return {
-    ...data,
-    totalAssessments: Math.max(0, Math.floor(data.totalAssessments)),
-    completedAssessments: Math.max(0, Math.floor(data.completedAssessments)),
-    averageScore: Math.max(0, Math.min(100, Math.round(data.averageScore))),
-    totalTimeSpent: Math.max(0, Math.floor(data.totalTimeSpent)),
-    streak: Math.max(0, Math.floor(data.streak)),
-    rank: Math.max(1, Math.floor(data.rank)),
-    totalStudents: Math.max(1, Math.floor(data.totalStudents)),
-    recentScores: data.recentScores.map((score: any) => ({
-      ...score,
-      score: Math.max(0, Math.min(100, Math.round(score.score || 0)))
-    })),
-    achievements: data.achievements.filter((achievement: any) => 
-      achievement && achievement.id && achievement.title && achievement.icon in ICON_MAP
-    )
-  };
+  try {
+    if (!isValidProgressStats(data)) {
+      console.warn('Data validation failed, using fallback');
+      return null;
+    }
+    
+    const rawData = data as any;
+    
+    return {
+      ...rawData,
+      totalAssessments: Math.max(0, Math.floor(rawData.totalAssessments || 0)),
+      completedAssessments: Math.max(0, Math.floor(rawData.completedAssessments || 0)),
+      averageScore: Math.max(0, Math.min(100, Math.round(rawData.averageScore || 0))),
+      totalTimeSpent: Math.max(0, Math.floor(rawData.totalTimeSpent || 0)),
+      streak: Math.max(0, Math.floor(rawData.streak || 0)),
+      rank: Math.max(1, Math.floor(rawData.rank || 1)),
+      totalStudents: Math.max(1, Math.floor(rawData.totalStudents || 1)),
+      improvements: rawData.improvements || { score: 0, time: 0, accuracy: 0 },
+      recentScores: (rawData.recentScores || []).map((score: any) => ({
+        ...score,
+        score: Math.max(0, Math.min(100, Math.round(score.score || 0)))
+      })),
+      subjectPerformance: rawData.subjectPerformance || [],
+      monthlyProgress: rawData.monthlyProgress || [],
+      weeklyActivity: rawData.weeklyActivity || [],
+      achievements: (rawData.achievements || []).filter((achievement: any) => 
+        achievement && achievement.id && achievement.title && achievement.icon in ICON_MAP
+      ),
+      skillLevels: rawData.skillLevels || []
+    };
+  } catch (error) {
+    console.error('Error in sanitizeProgressData:', error);
+    return null;
+  }
 };
 
 // Custom hook for progress data management

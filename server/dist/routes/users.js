@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const User_1 = require("../models/User");
 const Submission_1 = require("../models/Submission");
 const auth_1 = require("../middleware/auth");
+const Assessment_1 = require("../models/Assessment");
 const router = express_1.default.Router();
 // Get all students (Teacher only)
 router.get('/students', auth_1.authenticate, auth_1.requireTeacher, async (req, res) => {
@@ -86,6 +87,39 @@ router.get('/students/:id', auth_1.authenticate, auth_1.requireTeacher, async (r
     catch (error) {
         console.error('Get student details error:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch student details' });
+    }
+});
+// Get stats for the authenticated student
+router.get('/stats', auth_1.authenticate, auth_1.requireStudent, async (req, res) => {
+    try {
+        const studentEmail = req.user.email;
+        // Total assigned active assessments
+        const totalAssessments = await Assessment_1.Assessment.countDocuments({ assignedStudents: studentEmail, isActive: true });
+        // Student results
+        const results = await Submission_1.AssessmentResult.find({ studentEmail });
+        const completedAssessments = results.filter(r => r.completedAt).length;
+        const averageScore = results.length > 0
+            ? results.reduce((sum, r) => sum + (r.percentage || 0), 0) / results.length
+            : 0;
+        const totalTimeSpent = results.reduce((sum, r) => sum + (r.timeSpent || 0), 0);
+        // Simple placeholders for streak and rank
+        const currentStreak = 0;
+        const rank = 0;
+        res.json({
+            success: true,
+            stats: {
+                totalAssessments,
+                completedAssessments,
+                averageScore,
+                totalTimeSpent,
+                currentStreak,
+                rank
+            }
+        });
+    }
+    catch (error) {
+        console.error('Get student stats error:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch student stats' });
     }
 });
 exports.default = router;

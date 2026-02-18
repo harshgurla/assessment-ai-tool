@@ -17,7 +17,6 @@ const submission_1 = __importDefault(require("./routes/submission"));
 const users_1 = __importDefault(require("./routes/users"));
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
-
 // Middleware
 app.use((0, cors_1.default)({
     origin: [
@@ -31,18 +30,15 @@ app.use((0, cors_1.default)({
 }));
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '50mb' }));
-
 // Routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/assessments', assessment_1.default);
 app.use('/api/submissions', submission_1.default);
 app.use('/api/users', users_1.default);
-
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'Assessment Platform Server is running' });
 });
-
 // MongoDB connection
 const connectDB = async () => {
     try {
@@ -55,7 +51,6 @@ const connectDB = async () => {
         process.exit(1);
     }
 };
-
 // Start server
 const startServer = async () => {
     await connectDB();

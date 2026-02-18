@@ -43,7 +43,7 @@ const testCaseSchema = new mongoose_1.Schema({
 const questionSchema = new mongoose_1.Schema({
     type: {
         type: String,
-        enum: ['programming', 'theory'],
+        enum: ['programming', 'theory', 'mcq'],
         required: true
     },
     title: { type: String, required: true },
@@ -54,6 +54,23 @@ const questionSchema = new mongoose_1.Schema({
         required: true
     },
     language: { type: String },
+    // Nested structures for different question types
+    programmingData: {
+        language: { type: String },
+        starterCode: { type: String },
+        solution: { type: String },
+        testCases: [testCaseSchema]
+    },
+    theoryData: {
+        expectedKeywords: [{ type: String }],
+        minWords: { type: Number },
+        maxWords: { type: Number }
+    },
+    mcqData: {
+        options: [{ type: String }],
+        correctAnswer: { type: Number },
+        explanation: { type: String }
+    },
     testCases: [testCaseSchema],
     sampleInput: { type: String },
     sampleOutput: { type: String },

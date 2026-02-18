@@ -244,6 +244,52 @@ router.get('/:id', authenticate, async (req: AuthenticatedRequest, res) => {
   }
 });
 
+// Get Assessment Session Status (Student only) - NEW ENDPOINT
+router.get('/:id/session', authenticate, requireStudent, async (req: AuthenticatedRequest, res) => {
+  try {
+    console.log('📊 Get session status for assessment:', req.params.id);
+    
+    if (!req.params.id || req.params.id === 'undefined') {
+      return res.status(400).json({ error: 'Invalid assessment ID' });
+    }
+    
+    const assessment = await Assessment.findById(req.params.id);
+    
+    if (!assessment) {
+      return res.status(404).json({ error: 'Assessment not found' });
+    }
+
+    if (!assessment.assignedStudents.includes(req.user!.email)) {
+      return res.status(403).json({ error: 'Assessment not assigned to you' });
+    }
+
+    // Check for existing session
+    const existingResult = await AssessmentResult.findOne({
+      assessmentId: assessment._id.toString(),
+      studentEmail: req.user!.email
+    });
+
+    if (existingResult) {
+      return res.json({
+        hasSession: true,
+        resultId: existingResult._id,
+        startedAt: existingResult.startedAt,
+        completedAt: existingResult.completedAt,
+        duration: assessment.duration,
+        isCompleted: !!existingResult.completedAt
+      });
+    } else {
+      return res.json({
+        hasSession: false,
+        duration: assessment.duration
+      });
+    }
+  } catch (error) {
+    console.error('Get session status error:', error);
+    res.status(500).json({ error: 'Failed to get session status' });
+  }
+});
+
 // Start Assessment (Student only)
 router.post('/:id/start', authenticate, requireStudent, async (req: AuthenticatedRequest, res) => {
   try {
@@ -272,7 +318,15 @@ router.post('/:id/start', authenticate, requireStudent, async (req: Authenticate
     });
 
     if (existingResult) {
-      return res.status(400).json({ error: 'Assessment already started' });
+      // Return existing session data instead of error
+      console.log('Assessment already started, returning existing session');
+      return res.json({
+        message: 'Assessment already in progress',
+        resultId: existingResult._id,
+        startedAt: existingResult.startedAt,
+        duration: assessment.duration,
+        alreadyStarted: true
+      });
     }
 
     // Calculate max score

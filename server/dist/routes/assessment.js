@@ -84,7 +84,13 @@ router.post('/', auth_1.authenticate, auth_1.requireTeacher, async (req, res) =>
     }
     catch (error) {
         console.error('Create assessment error:', error);
-        res.status(500).json({ success: false, error: 'Failed to create assessment' });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        res.status(500).json({
+            success: false,
+            error: 'Failed to create assessment',
+            details: errorMessage,
+            stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
+        });
     }
 });
 // Get Teacher's Assessments
@@ -210,6 +216,47 @@ router.get('/:id', auth_1.authenticate, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch assessment details' });
     }
 });
+// Get Assessment Session Status (Student only) - NEW ENDPOINT
+router.get('/:id/session', auth_1.authenticate, auth_1.requireStudent, async (req, res) => {
+    try {
+        console.log('📊 Get session status for assessment:', req.params.id);
+        if (!req.params.id || req.params.id === 'undefined') {
+            return res.status(400).json({ error: 'Invalid assessment ID' });
+        }
+        const assessment = await Assessment_1.Assessment.findById(req.params.id);
+        if (!assessment) {
+            return res.status(404).json({ error: 'Assessment not found' });
+        }
+        if (!assessment.assignedStudents.includes(req.user.email)) {
+            return res.status(403).json({ error: 'Assessment not assigned to you' });
+        }
+        // Check for existing session
+        const existingResult = await Submission_1.AssessmentResult.findOne({
+            assessmentId: assessment._id.toString(),
+            studentEmail: req.user.email
+        });
+        if (existingResult) {
+            return res.json({
+                hasSession: true,
+                resultId: existingResult._id,
+                startedAt: existingResult.startedAt,
+                completedAt: existingResult.completedAt,
+                duration: assessment.duration,
+                isCompleted: !!existingResult.completedAt
+            });
+        }
+        else {
+            return res.json({
+                hasSession: false,
+                duration: assessment.duration
+            });
+        }
+    }
+    catch (error) {
+        console.error('Get session status error:', error);
+        res.status(500).json({ error: 'Failed to get session status' });
+    }
+});
 // Start Assessment (Student only)
 router.post('/:id/start', auth_1.authenticate, auth_1.requireStudent, async (req, res) => {
     try {
@@ -232,10 +279,22 @@ router.post('/:id/start', auth_1.authenticate, auth_1.requireStudent, async (req
             studentEmail: req.user.email
         });
         if (existingResult) {
-            return res.status(400).json({ error: 'Assessment already started' });
+            // Return existing session data instead of error
+            console.log('Assessment already started, returning existing session');
+            return res.json({
+                message: 'Assessment already in progress',
+                resultId: existingResult._id,
+                startedAt: existingResult.startedAt,
+                duration: assessment.duration,
+                alreadyStarted: true
+            });
         }
         // Calculate max score
-        const maxScore = assessment.questions.reduce((total, q) => total + q.points, 0);
+        const maxScore = assessment.questions.reduce((total, q) => {
+            const pts = Number(q.points) || 0;
+            return total + pts;
+        }, 0);
+        console.log('Calculated maxScore for assessment:', maxScore);
         // Create assessment result
         const result = new Submission_1.AssessmentResult({
             assessmentId: assessment._id.toString(),
@@ -247,7 +306,9 @@ router.post('/:id/start', auth_1.authenticate, auth_1.requireStudent, async (req
             startedAt: new Date(),
             timeSpent: 0
         });
+        console.log('Saving new AssessmentResult for student:', req.user.email);
         await result.save();
+        console.log('AssessmentResult saved:', result._id.toString());
         res.json({
             message: 'Assessment started successfully',
             resultId: result._id,

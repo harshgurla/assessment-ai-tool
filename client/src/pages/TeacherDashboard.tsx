@@ -16,6 +16,7 @@ import { CreateAssessmentModal } from '../components/teacher/CreateAssessmentMod
 import { AssessmentCard } from '../components/teacher/AssessmentCard';
 import { StudentManagement } from '../components/teacher/StudentManagement';
 import { AnalyticsDashboard } from '../components/teacher/AnalyticsDashboard';
+import { AssignStudentsModal } from '../components/teacher/AssignStudentsModal';
 
 interface Assessment {
   _id: string;
@@ -29,6 +30,7 @@ interface Assessment {
   status: 'draft' | 'active' | 'completed';
   studentsAssigned: number;
   submissions: number;
+  assignedStudents?: string[];
 }
 
 type ActiveTab = 'dashboard' | 'assessments' | 'students' | 'analytics' | 'settings';
@@ -39,6 +41,8 @@ export const TeacherDashboard = () => {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'active' | 'completed'>('all');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -355,9 +359,36 @@ export const TeacherDashboard = () => {
                     <AssessmentCard
                       key={assessment._id}
                       assessment={assessment}
-                      onEdit={() => {/* TODO: Implement edit */}}
-                      onDelete={() => {/* TODO: Implement delete */}}
-                      onView={() => {/* TODO: Implement view */}}
+                      onEdit={() => {
+                        // For now, just log - full edit implementation would require updating CreateAssessmentModal
+                        console.log('Edit assessment:', assessment._id);
+                        alert('Edit functionality coming soon! You can delete and recreate assessments for now.');
+                      }}
+                      onDelete={async () => {
+                        if (window.confirm(`Are you sure you want to delete "${assessment.title}"?`)) {
+                          try {
+                            const response = await fetch(`${import.meta.env.VITE_API_URL}/assessments/${assessment._id}`, {
+                              method: 'DELETE',
+                              headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                              }
+                            });
+                            if (response.ok) {
+                              fetchAssessments();
+                            }
+                          } catch (error) {
+                            console.error('Failed to delete assessment:', error);
+                          }
+                        }
+                      }}
+                      onView={() => {
+                        // TODO: Implement view
+                        console.log('View assessment:', assessment._id);
+                      }}
+                      onAssign={() => {
+                        setSelectedAssessment(assessment);
+                        setShowAssignModal(true);
+                      }}
                     />
                   ))}
                 </div>
@@ -405,9 +436,29 @@ export const TeacherDashboard = () => {
       {/* Create Assessment Modal */}
       {showCreateModal && (
         <CreateAssessmentModal
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => {
+            setShowCreateModal(false);
+          }}
           onSuccess={() => {
             setShowCreateModal(false);
+            fetchAssessments();
+          }}
+        />
+      )}
+
+      {/* Assign Students Modal */}
+      {showAssignModal && selectedAssessment && (
+        <AssignStudentsModal
+          assessmentId={selectedAssessment._id}
+          assessmentTitle={selectedAssessment.title}
+          currentStudents={selectedAssessment.assignedStudents || []}
+          onClose={() => {
+            setShowAssignModal(false);
+            setSelectedAssessment(null);
+          }}
+          onSuccess={() => {
+            setShowAssignModal(false);
+            setSelectedAssessment(null);
             fetchAssessments();
           }}
         />

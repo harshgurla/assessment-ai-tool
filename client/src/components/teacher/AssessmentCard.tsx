@@ -1,4 +1,4 @@
-import { Clock, Users, BarChart3, Eye, Edit, Trash2, Calendar } from 'lucide-react';
+import { Clock, Users, BarChart3, Eye, Edit, Trash2, Calendar, UserPlus } from 'lucide-react';
 
 interface Assessment {
   _id: string;
@@ -19,9 +19,10 @@ interface AssessmentCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onView: () => void;
+  onAssign: () => void;
 }
 
-export const AssessmentCard = ({ assessment, onEdit, onDelete, onView }: AssessmentCardProps) => {
+export const AssessmentCard = ({ assessment, onEdit, onDelete, onView, onAssign }: AssessmentCardProps) => {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'beginner': return 'bg-green-100 text-green-800';
@@ -52,21 +53,28 @@ export const AssessmentCard = ({ assessment, onEdit, onDelete, onView }: Assessm
           <div className="flex items-center space-x-1">
             <button
               onClick={onView}
-              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
               title="View Assessment"
             >
               <Eye className="h-4 w-4" />
             </button>
             <button
+              onClick={onAssign}
+              className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors touch-manipulation"
+              title="Assign to Students"
+            >
+              <UserPlus className="h-4 w-4" />
+            </button>
+            <button
               onClick={onEdit}
-              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors touch-manipulation"
               title="Edit Assessment"
             >
               <Edit className="h-4 w-4" />
             </button>
             <button
               onClick={onDelete}
-              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors touch-manipulation"
               title="Delete Assessment"
             >
               <Trash2 className="h-4 w-4" />

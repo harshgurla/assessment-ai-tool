@@ -142,16 +142,27 @@ router.get('/teacher', authenticate, requireTeacher, async (req: AuthenticatedRe
       isActive: true 
     }).sort({ createdAt: -1 });
 
-    const assessmentSummary = assessments.map(assessment => ({
-      id: assessment._id,
-      title: assessment.title,
-      topic: assessment.topic,
-      questionType: assessment.questionType,
-      difficulty: assessment.difficulty,
-      duration: assessment.duration,
-      questionCount: assessment.questions.length,
-      assignedStudents: assessment.assignedStudents.length,
-      createdAt: assessment.createdAt
+    const assessmentSummary = await Promise.all(assessments.map(async (assessment) => {
+      // Count submissions for this assessment
+      const submissionCount = await AssessmentResult.countDocuments({
+        assessmentId: assessment._id.toString()
+      });
+
+      return {
+        _id: assessment._id,
+        title: assessment.title,
+        topic: assessment.topic,
+        language: assessment.language,
+        questionType: assessment.questionType,
+        difficulty: assessment.difficulty,
+        duration: assessment.duration,
+        questions: assessment.questions,
+        assignedStudents: assessment.assignedStudents,
+        studentsAssigned: assessment.assignedStudents.length,
+        submissions: submissionCount,
+        createdAt: assessment.createdAt,
+        status: 'active' // You can add logic to determine draft/active/completed
+      };
     }));
 
     res.json({ assessments: assessmentSummary });
@@ -588,6 +599,74 @@ router.post('/generate-questions', authenticate, requireTeacher, async (req: Aut
         'Contact support if the issue persists'
       ]
     });
+  }
+});
+
+// Assign/Update Students for an Assessment (Teacher only)
+router.post('/:id/assign', authenticate, requireTeacher, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { studentEmails } = req.body;
+
+    if (!studentEmails || !Array.isArray(studentEmails)) {
+      return res.status(400).json({ success: false, error: 'Student emails array is required' });
+    }
+
+    // Validate all emails exist
+    const students = await User.find({ email: { $in: studentEmails }, role: 'student' });
+    if (students.length !== studentEmails.length) {
+      return res.status(400).json({ success: false, error: 'Some student emails are invalid' });
+    }
+
+    const assessment = await Assessment.findById(id);
+    if (!assessment) {
+      return res.status(404).json({ success: false, error: 'Assessment not found' });
+    }
+
+    // Check if the teacher owns this assessment
+    if (assessment.createdBy !== req.user!.email) {
+      return res.status(403).json({ success: false, error: 'Unauthorized' });
+    }
+
+    // Update assigned students
+    assessment.assignedStudents = studentEmails;
+    await assessment.save();
+
+    res.json({ 
+      success: true, 
+      message: `Assessment assigned to ${studentEmails.length} student(s)`,
+      assignedCount: studentEmails.length
+    });
+  } catch (error) {
+    console.error('Assign students error:', error);
+    res.status(500).json({ success: false, error: 'Failed to assign students' });
+  }
+});
+
+// Delete Assessment (Teacher only)
+router.delete('/:id', authenticate, requireTeacher, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const assessment = await Assessment.findById(id);
+    if (!assessment) {
+      return res.status(404).json({ success: false, error: 'Assessment not found' });
+    }
+
+    // Check if the teacher owns this assessment
+    if (assessment.createdBy !== req.user!.email) {
+      return res.status(403).json({ success: false, error: 'Unauthorized' });
+    }
+
+    await Assessment.findByIdAndDelete(id);
+
+    res.json({ 
+      success: true, 
+      message: 'Assessment deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete assessment error:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete assessment' });
   }
 });
 

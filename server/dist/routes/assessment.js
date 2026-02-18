@@ -51,6 +51,29 @@ router.post('/', auth_1.authenticate, auth_1.requireTeacher, async (req, res) =>
                     return tc;
                 });
             }
+            // Ensure MCQ data is properly structured
+            if (cleanQuestion.type === 'mcq') {
+                if (cleanQuestion.options && !cleanQuestion.mcqData) {
+                    // Convert flat structure to nested mcqData
+                    cleanQuestion.mcqData = {
+                        options: cleanQuestion.options,
+                        correctAnswer: cleanQuestion.correctAnswer || 0,
+                        explanation: cleanQuestion.explanation || ''
+                    };
+                    // Keep flat options for compatibility
+                }
+            }
+            // Ensure programming data is properly structured
+            if (cleanQuestion.type === 'programming') {
+                if (cleanQuestion.starterCode && !cleanQuestion.programmingData) {
+                    cleanQuestion.programmingData = {
+                        language: cleanQuestion.language || language,
+                        starterCode: cleanQuestion.starterCode,
+                        solution: cleanQuestion.solution || '',
+                        testCases: cleanQuestion.testCases || []
+                    };
+                }
+            }
             return cleanQuestion;
         });
         // Create assessment
@@ -202,10 +225,10 @@ router.get('/:id', auth_1.authenticate, async (req, res) => {
                     points: q.points,
                     // Hide test cases except sample ones
                     testCases: q.testCases?.filter(tc => !tc.isHidden),
-                    // Include MCQ options if present
-                    options: q.mcqData?.options,
+                    // Include MCQ options - check both nested and flat structure
+                    options: q.mcqData?.options || q.options,
                     // Include programming starter code if present
-                    starterCode: q.programmingData?.starterCode
+                    starterCode: q.programmingData?.starterCode || q.starterCode
                 })),
                 createdAt: assessment.createdAt
             };

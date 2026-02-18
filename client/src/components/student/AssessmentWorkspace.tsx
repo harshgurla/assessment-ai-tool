@@ -34,6 +34,7 @@ interface Question {
   }[];
   options?: string[]; // For MCQ questions
   correctAnswer?: string; // For MCQ questions
+  starterCode?: string; // For programming questions
 }
 
 interface Assessment {
@@ -87,6 +88,17 @@ export const AssessmentWorkspace = () => {
       const startTime = new Date(session.startedAt).getTime();
       const durationMs = session.duration * 60 * 1000; // Convert minutes to milliseconds
       const endTime = startTime + durationMs;
+      
+      // Set initial time remaining
+      const initialRemaining = Math.max(0, endTime - Date.now());
+      setTimeRemaining(initialRemaining);
+      
+      console.log('Timer started:', {
+        startTime: new Date(startTime).toISOString(),
+        duration: session.duration,
+        endTime: new Date(endTime).toISOString(),
+        remaining: Math.floor(initialRemaining / 1000) + ' seconds'
+      });
       
       const interval = setInterval(() => {
         const now = Date.now();
@@ -438,9 +450,17 @@ export const AssessmentWorkspace = () => {
                     {currentQuestion.points} point{currentQuestion.points !== 1 ? 's' : ''}
                   </span>
                 </div>
-                <div className="prose prose-gray max-w-none">
-                  <h3 className="text-lg font-medium mb-2">{currentQuestion.title}</h3>
-                  <p className="text-gray-700">{currentQuestion.description}</p>
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900">{currentQuestion.title}</h3>
+                  <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {currentQuestion.description}
+                  </div>
+                  {currentQuestion.constraints && (
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm font-medium text-yellow-800 mb-1">Constraints:</p>
+                      <p className="text-sm text-yellow-700 whitespace-pre-wrap">{currentQuestion.constraints}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -449,39 +469,74 @@ export const AssessmentWorkspace = () => {
                 {/* MCQ Question */}
                 {currentQuestion.type === 'mcq' && (
                   <div className="space-y-3">
-                    {currentQuestion.options?.map((option, index) => (
-                      <label
-                        key={index}
-                        className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                      >
-                        <input
-                          type="radio"
-                          name={`question-${currentQuestion._id}`}
-                          value={option}
-                          checked={answers[currentQuestion._id]?.answer === option}
-                          onChange={(e) => handleAnswerChange(currentQuestion._id, e.target.value)}
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        <span className="ml-3 text-gray-700">{option}</span>
-                      </label>
-                    ))}
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Select the correct answer:</h4>
+                    {currentQuestion.options && currentQuestion.options.length > 0 ? (
+                      currentQuestion.options.map((option, index) => (
+                        <label
+                          key={index}
+                          className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                            answers[currentQuestion._id]?.answer === option
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name={`question-${currentQuestion._id}`}
+                            value={option}
+                            checked={answers[currentQuestion._id]?.answer === option}
+                            onChange={(e) => handleAnswerChange(currentQuestion._id, e.target.value)}
+                            className="h-5 w-5 mt-0.5 text-blue-600 border-gray-300 focus:ring-blue-500 flex-shrink-0"
+                          />
+                          <span className="ml-3 text-base text-gray-800 leading-relaxed">
+                            <span className="font-medium text-gray-600 mr-2">{String.fromCharCode(65 + index)}.</span>
+                            {option}
+                          </span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-red-600">⚠️ No options available for this question</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Theory Question */}
                 {currentQuestion.type === 'theory' && (
-                  <textarea
-                    value={answers[currentQuestion._id]?.answer || ''}
-                    onChange={(e) => handleAnswerChange(currentQuestion._id, e.target.value)}
-                    placeholder="Type your answer here..."
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  />
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-gray-700">Your Answer:</h4>
+                    <textarea
+                      value={answers[currentQuestion._id]?.answer || ''}
+                      onChange={(e) => handleAnswerChange(currentQuestion._id, e.target.value)}
+                      placeholder="Type your detailed answer here...\n\nTip: Be clear and concise in your explanation."
+                      rows={8}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y min-h-[150px] text-base leading-relaxed"
+                    />
+                    <p className="text-xs text-gray-500">Word count: {(answers[currentQuestion._id]?.answer || '').split(/\s+/).filter(Boolean).length}</p>
+                  </div>
                 )}
 
                 {/* Programming Question */}
                 {currentQuestion.type === 'programming' && (
                   <div className="space-y-4">
+                    {/* Sample Input/Output */}
+                    {(currentQuestion.sampleInput || currentQuestion.sampleOutput) && (
+                      <div className="grid grid-cols-2 gap-4">
+                        {currentQuestion.sampleInput && (
+                          <div className="bg-gray-50 p-3 rounded-lg border">
+                            <p className="text-xs font-semibold text-gray-600 mb-2">Sample Input:</p>
+                            <pre className="text-sm text-gray-800 font-mono whitespace-pre-wrap">{currentQuestion.sampleInput}</pre>
+                          </div>
+                        )}
+                        {currentQuestion.sampleOutput && (
+                          <div className="bg-gray-50 p-3 rounded-lg border">
+                            <p className="text-xs font-semibold text-gray-600 mb-2">Sample Output:</p>
+                            <pre className="text-sm text-gray-800 font-mono whitespace-pre-wrap">{currentQuestion.sampleOutput}</pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="border rounded-lg overflow-hidden">
                       <div className="bg-gray-50 px-4 py-2 border-b flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-700">
@@ -501,17 +556,20 @@ export const AssessmentWorkspace = () => {
                         </button>
                       </div>
                       <Editor
-                        height="300px"
+                        height="400px"
                         language={assessment.language?.toLowerCase() || 'javascript'}
-                        value={answers[currentQuestion._id]?.code || ''}
+                        value={answers[currentQuestion._id]?.code || currentQuestion.starterCode || ''}
                         onChange={(value) => handleAnswerChange(currentQuestion._id, '', value || '')}
                         onMount={(editor) => { editorRef.current = editor; }}
+                        theme="vs-dark"
                         options={{
                           minimap: { enabled: false },
                           fontSize: 14,
                           lineNumbers: 'on',
                           scrollBeyondLastLine: false,
                           automaticLayout: true,
+                          wordWrap: 'on',
+                          tabSize: 2,
                         }}
                       />
                     </div>
@@ -529,21 +587,30 @@ export const AssessmentWorkspace = () => {
                     )}
 
                     {/* Test Cases */}
-                    {currentQuestion.testCases && (
-                      <div className="border rounded-lg overflow-hidden">
-                        <div className="bg-gray-50 px-4 py-2 border-b">
-                          <span className="text-sm font-medium text-gray-700">Test Cases</span>
+                    {currentQuestion.testCases && currentQuestion.testCases.length > 0 && (
+                      <div className="border rounded-lg overflow-hidden bg-white">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b">
+                          <span className="text-sm font-semibold text-gray-800">📋 Test Cases (Visible)</span>
                         </div>
                         <div className="p-4 space-y-3">
                           {currentQuestion.testCases.map((testCase, index) => (
-                            <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                              <p className="text-sm font-medium text-gray-700">Test Case {index + 1}:</p>
-                              <p className="text-sm text-gray-600 mt-1">
-                                <strong>Input:</strong> {testCase.input}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                <strong>Expected Output:</strong> {testCase.output}
-                              </p>
+                            <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                              <div className="flex items-center mb-2">
+                                <span className="inline-block w-6 h-6 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                                  {index + 1}
+                                </span>
+                                <span className="ml-2 text-sm font-medium text-gray-700">Test Case {index + 1}</span>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                                <div className="bg-blue-50 p-3 rounded border border-blue-100">
+                                  <p className="text-xs font-semibold text-blue-800 mb-1">Input:</p>
+                                  <pre className="text-sm text-gray-800 font-mono whitespace-pre-wrap break-words">{testCase.input}</pre>
+                                </div>
+                                <div className="bg-green-50 p-3 rounded border border-green-100">
+                                  <p className="text-xs font-semibold text-green-800 mb-1">Expected Output:</p>
+                                  <pre className="text-sm text-gray-800 font-mono whitespace-pre-wrap break-words">{testCase.output}</pre>
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>

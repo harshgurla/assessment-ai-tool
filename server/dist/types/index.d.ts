@@ -24,7 +24,7 @@ export interface Assessment {
 }
 export interface Question {
     _id: string;
-    type: 'programming' | 'theory';
+    type: 'programming' | 'theory' | 'mcq';
     title: string;
     description: string;
     difficulty: 'beginner' | 'intermediate' | 'advanced';

@@ -187,7 +187,7 @@ router.get('/:id', auth_1.authenticate, async (req, res) => {
                 questionType: assessment.questionType,
                 difficulty: assessment.difficulty,
                 duration: assessment.duration,
-                questions: assessment.questions.map((q, index) => ({
+                questions: assessment.questions.map((q) => ({
                     _id: q._id,
                     type: q.type,
                     title: q.title,
@@ -201,7 +201,11 @@ router.get('/:id', auth_1.authenticate, async (req, res) => {
                     memoryLimit: q.memoryLimit,
                     points: q.points,
                     // Hide test cases except sample ones
-                    testCases: q.testCases?.filter(tc => !tc.isHidden)
+                    testCases: q.testCases?.filter(tc => !tc.isHidden),
+                    // Include MCQ options if present
+                    options: q.mcqData?.options,
+                    // Include programming starter code if present
+                    starterCode: q.programmingData?.starterCode
                 })),
                 createdAt: assessment.createdAt
             };

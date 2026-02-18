@@ -1,0 +1,486 @@
+import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AIQuestionRequest, AIEvaluationRequest, AIEvaluationResponse, Question } from '../types';
+
+class AIService {
+  private openai: OpenAI | null;
+  private gemini: GoogleGenerativeAI | null;
+  private aiProvider: 'openai' | 'gemini';
+
+  constructor() {
+    // Determine AI provider
+    this.aiProvider = (process.env.AI_PROVIDER as 'openai' | 'gemini') || 'gemini';
+    
+    // Initialize OpenAI
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (openaiKey && openaiKey !== 'your-openai-api-key-here') {
+      this.openai = new OpenAI({
+        apiKey: openaiKey
+      });
+    } else {
+      this.openai = null;
+    }
+
+    // Initialize Google Gemini
+    const geminiKey = process.env.GOOGLE_GEMINI_API_KEY;
+    if (geminiKey && geminiKey !== 'YOUR_GEMINI_API_KEY_HERE') {
+      this.gemini = new GoogleGenerativeAI(geminiKey);
+    } else {
+      this.gemini = null;
+    }
+
+    // Log initialization status
+    if (this.aiProvider === 'gemini' && this.gemini) {
+      console.log('✅ Google Gemini AI service initialized successfully');
+    } else if (this.aiProvider === 'openai' && this.openai) {
+      console.log('✅ OpenAI service initialized successfully');
+    } else {
+      console.warn('❌ No AI service available. Please configure OpenAI or Gemini API keys.');
+    }
+  }
+
+  async generateQuestions(request: AIQuestionRequest): Promise<Question[]> {
+    console.log('🤖 AI generateQuestions called with:', JSON.stringify(request, null, 2));
+    console.log('🔧 Using AI Provider:', this.aiProvider);
+    
+    // Check if AI service is available
+    if (this.aiProvider === 'gemini' && !this.gemini) {
+      console.log('⚠️  Gemini client not available, using mock questions');
+      return this.generateMockQuestions(request);
+    }
+    
+    if (this.aiProvider === 'openai' && !this.openai) {
+      console.log('⚠️  OpenAI client not available, using mock questions');
+      return this.generateMockQuestions(request);
+    }
+    
+    try {
+      if (this.aiProvider === 'gemini') {
+        console.log('✅ Gemini client available, proceeding with AI generation');
+        return await this.generateQuestionsWithGemini(request);
+      } else {
+        console.log('✅ OpenAI client available, proceeding with AI generation');
+        return await this.generateQuestionsWithOpenAI(request);
+      }
+    } catch (error: any) {
+      console.error('❌ Error in generateQuestions:', error);
+      console.error('❌ Error message:', error.message);
+      
+      // Return mock questions as fallback
+      console.log('🔄 Falling back to mock questions...');
+      return this.generateMockQuestions(request);
+    }
+  }
+
+  private async generateQuestionsWithGemini(request: AIQuestionRequest): Promise<Question[]> {
+    const { topic, language, type, difficulty, count } = request;
+    
+    let prompt = this.buildPrompt(request);
+    
+    console.log('🚀 Making Google Gemini API call...');
+    console.log('📊 Model: gemini-pro');
+    console.log('📝 Prompt preview:', prompt.substring(0, 200) + '...');
+
+    const model = this.gemini!.getGenerativeModel({ model: 'gemini-pro' });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const content = response.text();
+
+    console.log('✅ Gemini API call successful');
+    console.log('📄 Raw content length:', content.length);
+    console.log('📄 Content preview:', content.substring(0, 300) + '...');
+
+    // Parse JSON response
+    let questions;
+    try {
+      // Remove any markdown code block markers if present
+      const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
+      questions = JSON.parse(cleanContent);
+      console.log('✅ JSON parsing successful, questions count:', questions.length);
+    } catch (parseError) {
+      console.error('❌ JSON parsing failed:', parseError);
+      console.error('📄 Raw content that failed to parse:', content);
+      throw new Error('Failed to parse AI response as JSON');
+    }
+    
+    // Add IDs and ensure proper structure
+    return questions.map((q: any, index: number) => ({
+      _id: `q_${Date.now()}_${index}`,
+      ...q
+    }));
+  }
+
+  private buildPrompt(request: AIQuestionRequest): string {
+    const { topic, language, type, difficulty, count } = request;
+    
+    let prompt = '';
+    
+    if (type === 'programming' || type === 'mixed') {
+      prompt = `Generate ${count} ${difficulty} level programming questions about ${topic}`;
+      if (language) {
+        prompt += ` in ${language}`;
+      }
+      prompt += `. For each question, provide:
+      1. Title (concise)
+      2. Description (detailed problem statement)
+      3. Sample input/output
+      4. Test cases (at least 3)
+      5. Constraints
+      6. Time limit (in seconds)
+      7. Memory limit (in MB)
+      8. Points (based on difficulty: easy=10, medium=20, hard=30)
+      
+      Format the response as JSON array with this structure:
+      {
+        "type": "programming",
+        "title": "Question Title",
+        "description": "Detailed problem description",
+        "sampleInput": "sample input",
+        "sampleOutput": "sample output",
+        "constraints": "constraints",
+        "timeLimit": 30,
+        "memoryLimit": 128,
+        "language": "${language}",
+        "testCases": [
+          {"input": "test1", "expectedOutput": "output1", "isHidden": false},
+          {"input": "test2", "expectedOutput": "output2", "isHidden": true}
+        ],
+        "points": 20
+      }`;
+    } else if (type === 'theory') {
+      prompt = `Generate ${count} ${difficulty} level theory questions about ${topic}. For each question, provide:
+      1. Title (concise)
+      2. Description (detailed question)
+      3. Expected keywords for evaluation
+      4. Points based on difficulty
+      
+      Format the response as JSON array with this structure:
+      {
+        "type": "theory",
+        "title": "Question Title",
+        "description": "Detailed question description",
+        "expectedAnswer": "Sample answer for reference",
+        "keywords": ["keyword1", "keyword2", "keyword3"],
+        "points": 15
+      }`;
+    } else if (type === 'mcq') {
+      prompt = `Generate ${count} ${difficulty} level multiple choice questions about ${topic}. For each question, provide:
+      1. Title (concise)
+      2. Description (question text)
+      3. Four options
+      4. Correct answer index (0-3)
+      5. Explanation
+      
+      Format the response as JSON array with this structure:
+      {
+        "type": "mcq",
+        "title": "Question Title",
+        "description": "Question text",
+        "options": ["Option A", "Option B", "Option C", "Option D"],
+        "correctAnswer": 0,
+        "explanation": "Why this is correct",
+        "points": 10
+      }`;
+    }
+    
+    return prompt;
+  }
+
+  private async generateQuestionsWithOpenAI(request: AIQuestionRequest): Promise<Question[]> {
+    const { topic, language, type, difficulty, count } = request;
+    
+    let prompt = this.buildPrompt(request);
+
+    console.log('🚀 Making OpenAI API call...');
+    console.log('📊 Model:', process.env.AI_MODEL || 'gpt-3.5-turbo');
+    console.log('📝 Prompt preview:', prompt.substring(0, 200) + '...');
+
+      const response = await this.openai!.chat.completions.create({
+        model: process.env.AI_MODEL || 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert programming instructor. Generate high-quality, educational programming and theory questions. Always respond with valid JSON.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: parseInt(process.env.MAX_TOKENS || '2000'),
+        temperature: 0.7
+      });
+
+      console.log('✅ OpenAI API call successful');
+      console.log('📤 Response usage:', response.usage);
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        console.error('❌ No content in OpenAI response');
+        throw new Error('No content generated');
+      }
+
+      console.log('📄 Raw content length:', content.length);
+      console.log('📄 Content preview:', content.substring(0, 300) + '...');
+
+      // Parse JSON response
+      let questions;
+      try {
+        questions = JSON.parse(content);
+        console.log('✅ JSON parsing successful, questions count:', questions.length);
+      } catch (parseError) {
+        console.error('❌ JSON parsing failed:', parseError);
+        console.error('📄 Raw content that failed to parse:', content);
+        throw new Error('Failed to parse AI response as JSON');
+      }
+      
+      // Add IDs and ensure proper structure
+      return questions.map((q: any, index: number) => ({
+        _id: `q_${Date.now()}_${index}`,
+        ...q
+      }));
+    } catch (error: any) {
+      console.error('❌ Error in generateQuestionsWithOpenAI:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      
+      if (error.response) {
+        console.error('❌ OpenAI API Error Response:', error.response.status, error.response.data);
+      }
+      
+      throw error;
+    }
+  }
+
+  async evaluateSubmission(request: AIEvaluationRequest): Promise<AIEvaluationResponse> {
+    if (!this.openai) {
+      // Return mock evaluation when OpenAI is not available
+      return this.generateMockEvaluation(request);
+    }
+    
+    try {
+      const { question, submission } = request;
+
+      if (question.type === 'programming') {
+        return this.evaluateProgrammingSubmission(question, submission);
+      } else {
+        return this.evaluateTheorySubmission(question, submission);
+      }
+    } catch (error) {
+      console.error('Error evaluating submission:', error);
+      throw new Error('Failed to evaluate submission');
+    }
+  }
+
+  private async evaluateProgrammingSubmission(
+    question: Question, 
+    submission: { code?: string; language?: string }
+  ): Promise<AIEvaluationResponse> {
+    if (!submission.code) {
+      return {
+        score: 0,
+        maxScore: question.points,
+        feedback: 'No code submitted',
+        status: 'wrong'
+      };
+    }
+
+    // Simple test case evaluation (in a real scenario, you'd run the code)
+    const prompt = `
+    Evaluate this programming solution:
+    
+    Problem: ${question.description}
+    Language: ${submission.language}
+    Code: ${submission.code}
+    
+    Test Cases: ${JSON.stringify(question.testCases)}
+    
+    Provide evaluation in JSON format:
+    {
+      "passed_tests": number,
+      "total_tests": number,
+      "score": number (0-${question.points}),
+      "feedback": "detailed feedback",
+      "status": "accepted" | "wrong" | "partial"
+    }
+    
+    Consider code quality, correctness, and efficiency.
+    `;
+
+    const response = await this.openai!.chat.completions.create({
+      model: process.env.AI_MODEL || 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert programming judge. Evaluate code submissions objectively and provide constructive feedback.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.3
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No evaluation generated');
+    }
+
+    const evaluation = JSON.parse(content);
+    
+    return {
+      score: evaluation.score,
+      maxScore: question.points,
+      feedback: evaluation.feedback,
+      status: evaluation.status
+    };
+  }
+
+  private async evaluateTheorySubmission(
+    question: Question, 
+    submission: { answer?: string }
+  ): Promise<AIEvaluationResponse> {
+    if (!submission.answer) {
+      return {
+        score: 0,
+        maxScore: question.points,
+        feedback: 'No answer submitted',
+        status: 'wrong'
+      };
+    }
+
+    const prompt = `
+    Evaluate this theory answer:
+    
+    Question: ${question.description}
+    Student Answer: ${submission.answer}
+    
+    Provide evaluation in JSON format:
+    {
+      "score": number (0-${question.points}),
+      "feedback": "detailed feedback with suggestions for improvement",
+      "status": "accepted" | "wrong" | "partial"
+    }
+    
+    Consider accuracy, completeness, clarity, and understanding of concepts.
+    `;
+
+    const response = await this.openai!.chat.completions.create({
+      model: process.env.AI_MODEL || 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert educator. Evaluate theory answers fairly and provide constructive feedback to help students learn.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.3
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No evaluation generated');
+    }
+
+    const evaluation = JSON.parse(content);
+    
+    return {
+      score: evaluation.score,
+      maxScore: question.points,
+      feedback: evaluation.feedback,
+      status: evaluation.status
+    };
+  }
+
+  async runCode(code: string, language: string, input: string): Promise<{
+    output: string;
+    error?: string;
+    executionTime: number;
+  }> {
+    // This is a mock implementation
+    // In a real scenario, you would integrate with a code execution service
+    // like Judge0, HackerEarth API, or build your own sandboxed execution environment
+    
+    return {
+      output: "Mock output - Code execution not implemented yet",
+      executionTime: Math.random() * 1000,
+    };
+  }
+
+  private generateMockQuestions(request: AIQuestionRequest): Question[] {
+    const { topic, type, difficulty, count } = request;
+    const questions: Question[] = [];
+
+    for (let i = 0; i < count; i++) {
+      if (type === 'programming' || type === 'mixed') {
+        questions.push({
+          _id: `mock_prog_${Date.now()}_${i}`,
+          type: 'programming',
+          title: `${topic} Programming Challenge ${i + 1}`,
+          description: `Write a program that solves a ${difficulty} level ${topic} problem. This is a mock question generated when AI service is not available.`,
+          difficulty,
+          language: request.language || 'javascript',
+          sampleInput: '5',
+          sampleOutput: '5',
+          constraints: 'Time limit: 2 seconds',
+          timeLimit: 2,
+          memoryLimit: 128,
+          points: difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30,
+          testCases: [
+            { input: '5', output: '5', isHidden: false },
+            { input: '10', output: '10', isHidden: true }
+          ]
+        });
+      }
+      
+      if (type === 'theory' || (type === 'mixed' && i % 2 === 1)) {
+        questions.push({
+          _id: `mock_theory_${Date.now()}_${i}`,
+          type: 'theory',
+          title: `${topic} Theory Question ${i + 1}`,
+          description: `Explain the key concepts of ${topic} at ${difficulty} level. This is a mock question generated when AI service is not available.`,
+          difficulty,
+          points: difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30
+        });
+      }
+    }
+
+    return questions;
+  }
+
+  private generateMockEvaluation(request: AIEvaluationRequest): AIEvaluationResponse {
+    const { question, submission } = request;
+    
+    // Simple mock evaluation
+    const hasContent = (submission.code && submission.code.trim().length > 0) || 
+                       (submission.answer && submission.answer.trim().length > 0);
+    
+    if (!hasContent) {
+      return {
+        score: 0,
+        maxScore: question.points,
+        feedback: 'No submission provided',
+        status: 'wrong'
+      };
+    }
+
+    // Random score for demo (60-90% for submissions with content)
+    const percentage = 0.6 + Math.random() * 0.3;
+    const score = Math.round(question.points * percentage);
+    
+    return {
+      score,
+      maxScore: question.points,
+      feedback: `Mock evaluation: Your submission received ${score}/${question.points} points. This is a demonstration evaluation since AI service is not configured.`,
+      status: score >= question.points * 0.8 ? 'accepted' : score >= question.points * 0.5 ? 'partial' : 'wrong'
+    };
+  }
+}
+
+export default new AIService();

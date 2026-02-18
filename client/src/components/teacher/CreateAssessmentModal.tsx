@@ -807,13 +807,13 @@ export const CreateAssessmentModal = ({ onClose, onSuccess }: CreateAssessmentMo
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center">
-            <h2 className="text-xl font-semibold text-gray-900">Create Assessment</h2>
-            <div className="ml-4 flex items-center space-x-2">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden my-auto">
+        {/* Header - Responsive */}
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+            <h2 className="text-base sm:text-xl font-semibold text-gray-900 truncate">Create Assessment</h2>
+            <div className="hidden sm:flex items-center space-x-2">
               {[1, 2, 3].map((stepNumber) => (
                 <div
                   key={stepNumber}
@@ -827,21 +827,32 @@ export const CreateAssessmentModal = ({ onClose, onSuccess }: CreateAssessmentMo
                 </div>
               ))}
             </div>
+            {/* Mobile step indicator */}
+            <div className="sm:hidden flex items-center gap-1">
+              {[1, 2, 3].map((stepNumber) => (
+                <div
+                  key={stepNumber}
+                  className={`w-2 h-2 rounded-full ${
+                    step >= stepNumber ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg touch-manipulation"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+        {/* Content - Responsive scrolling */}
+        <div className="overflow-y-auto max-h-[calc(95vh-140px)] sm:max-h-[calc(90vh-140px)]">
           {/* Step 1: Basic Information */}
           {step === 1 && (
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Assessment Title *

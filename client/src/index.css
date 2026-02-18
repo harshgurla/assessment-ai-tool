@@ -10,24 +10,37 @@
   }
   body {
     @apply bg-white text-gray-900 font-sans;
+    /* Optimize for mobile devices like iQoo Neo 10 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Smooth scrolling for better UX on tall screens */
+  html {
+    scroll-behavior: smooth;
   }
 }
 
 @layer components {
+  /* Enhanced buttons with better touch targets for mobile devices */
   .btn {
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50;
+    /* Minimum 44x44px touch target for accessibility */
+    min-height: 44px;
+    min-width: 44px;
   }
   
   .btn-primary {
-    @apply btn bg-blue-600 text-white shadow hover:bg-blue-700;
+    @apply btn bg-blue-600 text-white shadow hover:bg-blue-700 active:bg-blue-800;
   }
   
   .btn-secondary {
-    @apply btn bg-gray-100 text-gray-900 shadow-sm hover:bg-gray-200;
+    @apply btn bg-gray-100 text-gray-900 shadow-sm hover:bg-gray-200 active:bg-gray-300;
   }
   
   .btn-danger {
-    @apply btn bg-red-600 text-white shadow hover:bg-red-700;
+    @apply btn bg-red-600 text-white shadow hover:bg-red-700 active:bg-red-800;
   }
   
   .card {
@@ -36,5 +49,33 @@
   
   .input {
     @apply flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-50;
+    /* Better input sizing for mobile */
+    min-height: 44px;
+  }
+  
+  /* Optimizations for tall screens (20:9 aspect ratio) */
+  @media (min-aspect-ratio: 19/9) and (max-width: 768px) {
+    .mobile-optimized {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Touch-optimized interactive elements */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 }

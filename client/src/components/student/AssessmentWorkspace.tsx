@@ -434,38 +434,38 @@ export const AssessmentWorkspace = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-3">
-            {/* Mobile Progress - Shown only on mobile */}
-            <div className="lg:hidden mb-4 bg-white rounded-xl p-4 shadow-sm border">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-700">Question {currentQuestionIndex + 1} of {assessment.questions.length}</span>
-                <span className="text-xs text-gray-500">{Math.round(progress)}% Complete</span>
+            {/* Mobile Progress - Optimized for iQoo Neo 10 */}
+            <div className="lg:hidden mb-4 bg-white rounded-xl p-5 shadow-sm border">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-base font-semibold text-gray-800">Question {currentQuestionIndex + 1} of {assessment.questions.length}</span>
+                <span className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">{Math.round(progress)}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
                 <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 shadow-sm"
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <button
                   onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
                   disabled={currentQuestionIndex === 0}
-                  className="flex items-center px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="flex items-center px-5 py-3 text-sm border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation min-h-[48px] font-medium"
                 >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  <ArrowLeft className="h-5 w-5 mr-1.5" />
                   Prev
                 </button>
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-1">
                   {assessment.questions.slice(0, 10).map((q, idx) => (
                     <button
                       key={q._id}
                       onClick={() => setCurrentQuestionIndex(idx)}
-                      className={`w-2 h-2 rounded-full transition-colors ${
+                      className={`min-w-[10px] h-2.5 rounded-full transition-all touch-manipulation ${
                         idx === currentQuestionIndex 
-                          ? 'bg-blue-600 w-6'
+                          ? 'bg-blue-600 w-8'
                           : answers[q._id] 
-                            ? 'bg-green-500' 
-                            : 'bg-gray-300'
+                            ? 'bg-green-500 w-2.5' 
+                            : 'bg-gray-300 w-2.5'
                       }`}
                     />
                   ))}
@@ -473,10 +473,10 @@ export const AssessmentWorkspace = () => {
                 <button
                   onClick={() => setCurrentQuestionIndex(Math.min(assessment.questions.length - 1, currentQuestionIndex + 1))}
                   disabled={currentQuestionIndex === assessment.questions.length - 1}
-                  className="flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="flex items-center px-5 py-3 text-sm bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation min-h-[48px] font-medium shadow-sm"
                 >
                   Next
-                  <ArrowRight className="h-4 w-4 ml-1" />
+                  <ArrowRight className="h-5 w-5 ml-1.5" />
                 </button>
               </div>
             </div>

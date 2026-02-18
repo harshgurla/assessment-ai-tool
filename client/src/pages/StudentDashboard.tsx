@@ -158,13 +158,13 @@ export const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg border-r border-gray-200">
+      <div className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
         <div className="p-6">
           <h1 className="text-2xl font-bold text-gray-900">Learning Hub</h1>
           <p className="text-sm text-gray-500 mt-1">Student Portal</p>
         </div>
 
-        <nav className="mt-6">
+        <nav className="mt-6 flex-1">
           {sidebarItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -184,7 +184,7 @@ export const StudentDashboard = () => {
           })}
         </nav>
 
-        <div className="absolute bottom-6 left-6 right-6">
+        <div className="p-4 border-t border-gray-200 mt-auto">
           <div className="bg-gray-100 rounded-lg p-4">
             <div className="flex items-center">
               <div className="bg-green-600 rounded-full w-10 h-10 flex items-center justify-center text-white font-semibold">
@@ -305,7 +305,12 @@ export const StudentDashboard = () => {
                     </div>
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-500">Time Spent</p>
-                      <p className="text-2xl font-bold text-gray-900">{Math.round(stats.totalTimeSpent / 60)}h</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {stats.totalTimeSpent >= 60 
+                          ? `${Math.floor(stats.totalTimeSpent / 60)}h ${Math.round(stats.totalTimeSpent % 60)}m`
+                          : `${Math.round(stats.totalTimeSpent)}m`
+                        }
+                      </p>
                     </div>
                   </div>
                 </div>

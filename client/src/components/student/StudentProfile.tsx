@@ -208,12 +208,18 @@ export const StudentProfile = () => {
   };
 
   const formatTime = (minutes: number) => {
+    if (!minutes || minutes === 0) return '0m';
+    
     const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
+    const mins = Math.round(minutes % 60);
+    
+    if (hours > 0 && mins > 0) {
       return `${hours}h ${mins}m`;
+    } else if (hours > 0) {
+      return `${hours}h`;
+    } else {
+      return `${mins}m`;
     }
-    return `${mins}m`;
   };
 
   if (loading) {

@@ -99,7 +99,13 @@ router.post('/', authenticate, requireTeacher, async (req: AuthenticatedRequest,
     });
   } catch (error) {
     console.error('Create assessment error:', error);
-    res.status(500).json({ success: false, error: 'Failed to create assessment' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to create assessment',
+      details: errorMessage,
+      stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
+    });
   }
 });
 

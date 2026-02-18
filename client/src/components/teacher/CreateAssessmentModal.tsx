@@ -340,11 +340,13 @@ export const CreateAssessmentModal = ({ onClose, onSuccess }: CreateAssessmentMo
       if (data.success) {
         onSuccess();
       } else {
-        alert('Failed to create assessment: ' + (data.error || data.message || 'Unknown error'));
+        const errorDetails = data.details ? `\n\nDetails: ${data.details}` : '';
+        alert('Failed to create assessment: ' + (data.error || data.message || 'Unknown error') + errorDetails);
       }
     } catch (error) {
       console.error('Failed to create assessment:', error);
-      alert('Failed to create assessment. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Network error or server is down';
+      alert('Failed to create assessment: ' + errorMessage + '\n\nPlease check:\n• Server is running\n• You have an internet connection\n• Backend URL is correct');
     } finally {
       setLoading(false);
     }

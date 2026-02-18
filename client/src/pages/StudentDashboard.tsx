@@ -93,7 +93,7 @@ export const StudentDashboard = () => {
 
   const fetchStudentStats = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/students/stats`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/students/stats`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -101,11 +101,20 @@ export const StudentDashboard = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setStats(data.stats || stats);
+        if (data.success && data.stats) {
+          setStats({
+            totalAssessments: data.stats.totalAssessments || 0,
+            completedAssessments: data.stats.completedAssessments || 0,
+            averageScore: data.stats.averageScore || 0,
+            totalTimeSpent: data.stats.totalTimeSpent || 0,
+            currentStreak: data.stats.currentStreak || 0,
+            rank: data.stats.rank || 0
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch student stats:', error);
-      // Don't show error for stats as it's not critical
+      // Keep default stats on error
     }
   };
 

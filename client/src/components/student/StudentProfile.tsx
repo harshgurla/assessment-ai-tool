@@ -66,7 +66,8 @@ export const StudentProfile = () => {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch('/api/students/profile', {
+      // Fetch user profile from auth verify endpoint
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/verify`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -78,19 +79,45 @@ export const StudentProfile = () => {
       }
 
       const data = await response.json();
-      setProfile(data);
-    } catch (err) {
-      console.error('Error fetching profile:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
       
-      // Mock data for development
+      // Fetch stats
+      const statsResponse = await fetch(`${import.meta.env.VITE_API_URL}/users/students/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      let stats = {
+        totalAssessments: 0,
+        completedAssessments: 0,
+        averageScore: 0,
+        totalTimeSpent: 0,
+        streak: 0,
+        achievements: 0
+      };
+      
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        if (statsData.success && statsData.stats) {
+          stats = {
+            totalAssessments: statsData.stats.totalAssessments || 0,
+            completedAssessments: statsData.stats.completedAssessments || 0,
+            averageScore: statsData.stats.averageScore || 0,
+            totalTimeSpent: statsData.stats.totalTimeSpent || 0,
+            streak: statsData.stats.currentStreak || 0,
+            achievements: 0
+          };
+        }
+      }
+      
       setProfile({
-        _id: 'student123',
-        email: 'student@example.com',
-        name: 'Alex Johnson',
-        joinDate: '2023-09-15',
-        bio: 'Passionate about learning programming and solving complex problems.',
-        skills: ['JavaScript', 'Python', 'React', 'Node.js'],
+        _id: data.user.id,
+        email: data.user.email,
+        name: data.user.name || 'Student',
+        joinDate: new Date().toISOString(),
+        bio: '',
+        skills: [],
         preferences: {
           notifications: {
             email: true,
@@ -100,15 +127,14 @@ export const StudentProfile = () => {
           theme: 'light',
           language: 'en'
         },
-        stats: {
-          totalAssessments: 15,
-          completedAssessments: 12,
-          averageScore: 78,
-          totalTimeSpent: 1440,
-          streak: 7,
-          achievements: 5
-        }
+        stats
       });
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      
+      // Show error without mock data
+      // Error already set above
     } finally {
       setLoading(false);
     }

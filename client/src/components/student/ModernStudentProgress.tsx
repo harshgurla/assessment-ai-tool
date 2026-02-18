@@ -145,13 +145,49 @@ const useProgressData = (userId?: string, timeRange: 'week' | 'month' | 'year' =
       setLoading(true);
       setError(null);
 
-      // TODO: Replace with actual API call when backend is ready
-      const loadingDelay = Math.min(500 + retryCount * 200, 2000);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/students/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch progress data');
+      }
+
+      const data = await response.json();
       
-      return new Promise<void>((resolve, reject) => {
-        setTimeout(() => {
-          try {
-            const mockData = {
+      if (data.success && data.stats) {
+        const basicStats = data.stats;
+        // Create extended stats with real data where available
+        const extendedStats = {
+          ...basicStats,
+          improvements: { score: 0, time: 0, accuracy: 0 },
+          recentScores: [],
+          subjectPerformance: [],
+          monthlyProgress: [],
+          weeklyActivity: [],
+          achievements: [],
+          skillLevels: []
+        };
+        
+        const sanitizedData = sanitizeProgressData(extendedStats);
+        if (sanitizedData) {
+          setStats(sanitizedData);
+          setLoading(false);
+          setRetryCount(0);
+        } else {
+          throw new Error('Data validation failed');
+        }
+      } else {
+        // Fallback to mock data structure for demo
+        const mockData = {
               totalAssessments: 24,
               completedAssessments: 18,
               averageScore: 82,
@@ -215,21 +251,15 @@ const useProgressData = (userId?: string, timeRange: 'week' | 'month' | 'year' =
               ]
             };
             
-            const sanitizedData = sanitizeProgressData(mockData);
-            if (sanitizedData) {
-              setStats(sanitizedData);
-              setLoading(false);
-              setRetryCount(0);
-              resolve();
-            } else {
-              reject(new Error('Data validation failed - corrupted progress data'));
-            }
-          } catch (error) {
-            console.error('Error setting mock data:', error);
-            reject(new Error('Failed to process progress data'));
-          }
-        }, loadingDelay);
-      });
+        const sanitizedData = sanitizeProgressData(mockData);
+        if (sanitizedData) {
+          setStats(sanitizedData);
+          setLoading(false);
+          setRetryCount(0);
+        } else {
+          throw new Error('Data validation failed - corrupted progress data');
+        }
+      }
     } catch (err) {
       console.error('Error fetching progress:', err);
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching progress data';

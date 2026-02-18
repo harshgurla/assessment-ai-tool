@@ -86,7 +86,7 @@ export const StudentProgress = ({ userId }: StudentProgressProps) => {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch(`/api/students/progress?timeRange=${timeRange}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/students/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -98,12 +98,28 @@ export const StudentProgress = ({ userId }: StudentProgressProps) => {
       }
 
       const data = await response.json();
-      setStats(data);
+      
+      // Map backend data to progress stats format
+      if (data.success && data.stats) {
+        const basicStats = data.stats;
+        setStats({
+          ...basicStats,
+          improvements: { score: 0, time: 0, accuracy: 0 },
+          recentScores: [],
+          subjectPerformance: [],
+          monthlyProgress: [],
+          weeklyActivity: [],
+          achievements: [],
+          skillLevels: []
+        });
+      } else {
+        throw new Error('Invalid data format');
+      }
     } catch (err) {
       console.error('Error fetching progress:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : 'Unable to load progress data');
       
-      // Mock data for development
+      // Fallback: show basic stats from API or defaults
       setStats({
         totalAssessments: 15,
         completedAssessments: 12,

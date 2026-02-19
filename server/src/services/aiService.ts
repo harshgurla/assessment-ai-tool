@@ -1,51 +1,69 @@
 import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { AIQuestionRequest, AIEvaluationRequest, AIEvaluationResponse, Question } from '../types';
 
 class AIService {
   private openai: OpenAI | null;
   private gemini: GoogleGenerativeAI | null;
-  private aiProvider: 'openai' | 'gemini';
+  private groq: Groq | null;
+  private aiProvider: 'groq' | 'gemini' | 'openai';
 
   constructor() {
     // Get API keys from environment
-    const openaiKey = process.env.OPENAI_API_KEY;
+    const groqKey = process.env.GROQ_API_KEY;
     const geminiKey = process.env.GOOGLE_GEMINI_API_KEY;
-    const preferredProvider = process.env.AI_PROVIDER as 'openai' | 'gemini';
+    const openaiKey = process.env.OPENAI_API_KEY;
+    const preferredProvider = process.env.AI_PROVIDER as 'groq' | 'gemini' | 'openai';
     
     // Validate API keys more strictly
-    const hasValidOpenAI = openaiKey && 
-      openaiKey !== 'your-openai-api-key-here' && 
-      openaiKey.startsWith('sk-') && 
-      openaiKey.length > 20;
-      
+    const hasValidGroq = groqKey && 
+      groqKey !== 'your-groq-api-key-here' && 
+      groqKey.startsWith('gsk_') && 
+      groqKey.length > 20;
+    
     const hasValidGemini = geminiKey && 
       geminiKey !== 'YOUR_GEMINI_API_KEY_HERE' && 
       geminiKey.startsWith('AIza') && 
       geminiKey.length > 20;
+    
+    const hasValidOpenAI = openaiKey && 
+      openaiKey !== 'your-openai-api-key-here' && 
+      openaiKey.startsWith('sk-') && 
+      openaiKey.length > 20;
 
-    // Priority: Use Gemini first (free), then OpenAI (paid)
-    if (hasValidGemini) {
+    // Priority: Use Groq first (fastest, free), then Gemini (free), then OpenAI (paid)
+    if (hasValidGroq) {
+      this.aiProvider = 'groq';
+      this.groq = new Groq({ apiKey: groqKey });
+      this.gemini = null;
+      this.openai = null;
+      console.log('✅ Using Groq Llama 3.3 70B (Ultra-Fast, Free Tier: 30 req/min)');
+    } else if (hasValidGemini) {
       this.aiProvider = 'gemini';
       this.gemini = new GoogleGenerativeAI(geminiKey);
-      this.openai = null; // Don't initialize OpenAI if Gemini works
-      console.log('✅ Using Google Gemini AI (Free Tier Available)');
+      this.groq = null;
+      this.openai = null;
+      console.log('✅ Using Google Gemini AI (Free Tier: 15 req/min)');
     } else if (hasValidOpenAI && preferredProvider === 'openai') {
       this.aiProvider = 'openai';
       this.openai = new OpenAI({ apiKey: openaiKey });
+      this.groq = null;
       this.gemini = null;
       console.log('✅ Using OpenAI (Note: This is a paid service)');
     } else {
       // No valid AI service available
-      this.aiProvider = 'gemini'; // Default fallback
-      this.openai = null;
+      this.aiProvider = 'groq'; // Default fallback
+      this.groq = null;
       this.gemini = null;
+      this.openai = null;
       
       console.warn('❌ No valid AI service available.');
       console.warn('📝 Recommended solution:');
-      console.warn('  🆓 Get a FREE Google Gemini API key from: https://makersuite.google.com/app/apikey');
+      console.warn('  ⚡ Get a FREE Groq API key from: https://console.groq.com/keys (FASTEST!)');
+      console.warn('  🆓 Or get a FREE Google Gemini API key from: https://makersuite.google.com/app/apikey');
       console.warn('  💰 Or get a paid OpenAI API key from: https://platform.openai.com/api-keys');
-      console.warn('  📁 Add the key to your .env file');
+      console.warn('  📁 Add GROQ_API_KEY=your_key to your .env file');
       console.warn('  🔄 Restart the server');
       console.warn('  ⚡ Mock questions will be used as fallback');
     }
@@ -56,6 +74,11 @@ class AIService {
     console.log('🔧 Using AI Provider:', this.aiProvider);
     
     // Check if AI service is available
+    if (this.aiProvider === 'groq' && !this.groq) {
+      console.log('⚠️  Groq client not available, using mock questions');
+      return this.generateMockQuestions(request);
+    }
+    
     if (this.aiProvider === 'gemini' && !this.gemini) {
       console.log('⚠️  Gemini client not available, using mock questions');
       return this.generateMockQuestions(request);
@@ -67,7 +90,10 @@ class AIService {
     }
     
     try {
-      if (this.aiProvider === 'gemini') {
+      if (this.aiProvider === 'groq') {
+        console.log('✅ Groq client available, proceeding with AI generation');
+        return await this.generateQuestionsWithGroq(request);
+      } else if (this.aiProvider === 'gemini') {
         console.log('✅ Gemini client available, proceeding with AI generation');
         return await this.generateQuestionsWithGemini(request);
       } else {
@@ -78,9 +104,128 @@ class AIService {
       console.error('❌ Error in generateQuestions:', error);
       console.error('❌ Error message:', error.message);
       
-      // Return mock questions as fallback
+      // Try fallback to other providers
+      console.log('🔄 Attempting fallback to alternative AI providers...');
+      
+      // Try Gemini if Groq failed
+      if (this.aiProvider === 'groq' && this.gemini) {
+        try {
+          console.log('🔄 Falling back to Gemini...');
+          return await this.generateQuestionsWithGemini(request);
+        } catch (fallbackError) {
+          console.error('❌ Gemini fallback also failed');
+        }
+      }
+      
+      // Return mock questions as final fallback
       console.log('🔄 Falling back to mock questions...');
       return this.generateMockQuestions(request);
+    }
+  }
+
+  private async generateQuestionsWithGroq(request: AIQuestionRequest): Promise<Question[]> {
+    const { topic, language, type, difficulty, count } = request;
+    
+    if (!this.groq) {
+      throw new Error('Groq client is not initialized. Please check your API key.');
+    }
+    
+    let prompt = this.buildPrompt(request);
+    
+    console.log('🚀 Making Groq API call...');
+    console.log('📊 Model: llama-3.3-70b-versatile');
+    console.log('📝 Prompt preview:', prompt.substring(0, 200) + '...');
+
+    try {
+      const completion = await this.groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert programming instructor. Generate high-quality, educational programming and theory questions. Always respond with valid JSON array only, no additional text or markdown formatting.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+        top_p: 1,
+        stream: false
+      });
+      
+      if (!completion.choices || completion.choices.length === 0) {
+        throw new Error('Empty response from Groq API');
+      }
+      
+      const content = completion.choices[0]?.message?.content;
+      
+      if (!content || content.trim().length === 0) {
+        throw new Error('Empty content from Groq API');
+      }
+
+      console.log('✅ Groq API call successful');
+      console.log('📄 Raw content length:', content.length);
+      console.log('📄 Content preview:', content.substring(0, 300) + '...');
+      console.log('⚡ Performance:', completion.usage);
+
+      // Parse JSON response
+      let questions;
+      try {
+        // Remove any markdown code block markers if present
+        const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
+        
+        // Try to extract JSON if it's embedded in text
+        const jsonMatch = cleanContent.match(/\[.*\]/s);
+        const jsonString = jsonMatch ? jsonMatch[0] : cleanContent;
+        
+        questions = JSON.parse(jsonString);
+        
+        if (!Array.isArray(questions)) {
+          throw new Error('Response is not an array of questions');
+        }
+        
+        console.log('✅ JSON parsing successful, questions count:', questions.length);
+      } catch (parseError) {
+        console.error('❌ JSON parsing failed:', parseError);
+        console.error('📄 Raw content that failed to parse:', content.substring(0, 500));
+        throw new Error(`Failed to parse AI response as JSON: ${parseError}`);
+      }
+      
+      // Validate and structure questions
+      const structuredQuestions = questions.map((q: any, index: number) => {
+        if (!q.title || !q.description) {
+          console.warn(`⚠️  Question ${index + 1} missing required fields, using defaults`);
+        }
+        
+        return {
+          _id: `q_${Date.now()}_${index}`,
+          title: q.title || `${topic} Question ${index + 1}`,
+          description: q.description || `Question about ${topic}`,
+          type: type,
+          difficulty: difficulty,
+          points: this.getPointsByDifficulty(difficulty),
+          timeLimit: 30,
+          ...q
+        };
+      });
+      
+      return structuredQuestions;
+      
+    } catch (error: any) {
+      console.error('❌ Groq API Error:', error);
+      
+      // Provide specific error messages
+      if (error.message?.includes('API key')) {
+        throw new Error('Invalid Groq API key. Please check your GROQ_API_KEY in .env file.');
+      } else if (error.message?.includes('rate limit')) {
+        throw new Error('Groq API rate limit exceeded. Free tier: 30 requests/minute. Please try again in a moment.');
+      } else if (error.message?.includes('quota')) {
+        throw new Error('Groq API quota exceeded. Please check your usage limits.');
+      } else {
+        throw new Error(`Groq API error: ${error.message || 'Unknown error occurred'}`);
+      }
     }
   }
 

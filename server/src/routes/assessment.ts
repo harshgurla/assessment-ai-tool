@@ -624,7 +624,7 @@ router.post('/:id/assign', authenticate, requireTeacher, async (req: Authenticat
     }
 
     // Check if the teacher owns this assessment
-    if (assessment.createdBy !== req.user!.email) {
+    if (assessment.createdBy !== req.user!.id) {
       return res.status(403).json({ success: false, error: 'Unauthorized' });
     }
 
